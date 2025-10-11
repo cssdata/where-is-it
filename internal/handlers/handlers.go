@@ -50,7 +50,90 @@ func (h *Handler) Locations(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.tmpl.ExecuteTemplate(w, "locations.html", locations)
+
+		// Get all items to check which locations have items
+		allItems, err := h.storage.GetAllItems()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Create maps for checking dependencies
+		locationHasItems := make(map[string]bool)
+		locationHasChildren := make(map[string]bool)
+
+		// Check which locations have items
+		for _, item := range allItems {
+			locationHasItems[item.LocationID] = true
+		}
+
+		// Check which locations have children
+		for _, location := range locations {
+			if location.ParentID != nil {
+				locationHasChildren[*location.ParentID] = true
+			}
+		}
+
+		data := struct {
+			Locations           []models.Location
+			LocationHasItems    map[string]bool
+			LocationHasChildren map[string]bool
+		}{
+			Locations:           locations,
+			LocationHasItems:    locationHasItems,
+			LocationHasChildren: locationHasChildren,
+		}
+
+		h.tmpl.ExecuteTemplate(w, "locations.html", data)
+	case "DELETE":
+		// Handle location deletion
+		locationID := r.URL.Query().Get("id")
+		if locationID == "" {
+			http.Error(w, "Location ID required", http.StatusBadRequest)
+			return
+		}
+
+		// Check if location has items
+		items, err := h.storage.GetItemsByLocation(locationID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if len(items) > 0 {
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte("Cannot delete location: it contains items"))
+			return
+		}
+
+		// Check if location has child locations
+		allLocations, err := h.storage.GetAllLocations()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		hasChildren := false
+		for _, loc := range allLocations {
+			if loc.ParentID != nil && *loc.ParentID == locationID {
+				hasChildren = true
+				break
+			}
+		}
+
+		if hasChildren {
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte("Cannot delete location: it has sub-locations"))
+			return
+		}
+
+		if err := h.storage.DeleteLocation(locationID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Location deleted successfully"))
 	}
 }
 
@@ -134,7 +217,25 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		locations, _ := h.storage.GetAllLocations()
-		h.tmpl.ExecuteTemplate(w, "item-form.html", locations)
+
+		// If a location is pre-selected (e.g., from location page), get its positions
+		selectedLocationID := r.URL.Query().Get("location")
+		var positions []string
+		if selectedLocationID != "" {
+			positions, _ = h.storage.GetPositionsByLocation(selectedLocationID)
+		}
+
+		data := struct {
+			Locations          []models.Location
+			SelectedLocationID string
+			Positions          []string
+		}{
+			Locations:          locations,
+			SelectedLocationID: selectedLocationID,
+			Positions:          positions,
+		}
+
+		h.tmpl.ExecuteTemplate(w, "item-form.html", data)
 	case "POST":
 		quantity, _ := strconv.Atoi(r.FormValue("quantity"))
 
@@ -142,6 +243,7 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 			Name:        r.FormValue("name"),
 			Description: r.FormValue("description"),
 			LocationID:  r.FormValue("location_id"),
+			Position:    r.FormValue("position"),
 			Quantity:    quantity,
 			Unit:        r.FormValue("unit"),
 			Properties:  make(map[string]string),
@@ -254,6 +356,24 @@ func (h *Handler) APIItems(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(item)
 	}
+}
+
+func (h *Handler) APIPositions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	locationID := r.URL.Query().Get("location_id")
+	if locationID == "" {
+		http.Error(w, "location_id parameter required", http.StatusBadRequest)
+		return
+	}
+
+	positions, err := h.storage.GetPositionsByLocation(locationID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(positions)
 }
 
 func (h *Handler) APISearch(w http.ResponseWriter, r *http.Request) {

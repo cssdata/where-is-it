@@ -26,6 +26,7 @@ type Storage interface {
 	GetItem(id string) (*models.Item, error)
 	GetAllItems() ([]models.Item, error)
 	GetItemsByLocation(locationID string) ([]models.Item, error)
+	GetPositionsByLocation(locationID string) ([]string, error)
 	UpdateItem(item *models.Item) error
 	DeleteItem(id string) error
 
@@ -223,6 +224,23 @@ func (s *JSONStorage) GetItemsByLocation(locationID string) ([]models.Item, erro
 	})
 
 	return items, nil
+}
+
+func (s *JSONStorage) GetPositionsByLocation(locationID string) ([]string, error) {
+	positionSet := make(map[string]bool)
+	var positions []string
+
+	for _, item := range s.items {
+		if item.LocationID == locationID && item.Position != "" {
+			if !positionSet[item.Position] {
+				positionSet[item.Position] = true
+				positions = append(positions, item.Position)
+			}
+		}
+	}
+
+	sort.Strings(positions)
+	return positions, nil
 }
 
 func (s *JSONStorage) UpdateItem(item *models.Item) error {

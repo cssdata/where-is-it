@@ -21,6 +21,7 @@ type Item struct {
 	Name        string            `json:"name"`
 	Description string            `json:"description"`
 	LocationID  string            `json:"location_id"`
+	Position    string            `json:"position"` // e.g., "vorn oben", "hinten links", "mitte"
 	Quantity    int               `json:"quantity"`
 	Unit        string            `json:"unit"`       // e.g., "pieces", "kg", "liters"
 	Properties  map[string]string `json:"properties"` // e.g., {"size": "M4", "length": "20mm", "standard": "ISO XYZ"}

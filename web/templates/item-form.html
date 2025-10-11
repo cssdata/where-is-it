@@ -38,12 +38,22 @@
 
             <div class="form-group">
                 <label for="location_id">Lagerort *</label>
-                <select id="location_id" name="location_id" required>
+                <select id="location_id" name="location_id" required onchange="loadPositions()">
                     <option value="">Lagerort auswählen</option>
-                    {{range .}}
-                    <option value="{{.ID}}">{{.Path}}</option>
+                    {{range .Locations}}
+                    <option value="{{.ID}}" {{if eq .ID $.SelectedLocationID}}selected{{end}}>{{.Path}}</option>
                     {{end}}
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label for="position">Position (optional)</label>
+                <input type="text" id="position" name="position" placeholder="z.B. vorn oben, hinten links, mitte" list="position-suggestions">
+                <datalist id="position-suggestions">
+                    {{range .Positions}}
+                    <option value="{{.}}">
+                    {{end}}
+                </datalist>
             </div>
 
             <div class="form-row">
@@ -97,6 +107,36 @@
         function removeProperty(button) {
             button.parentElement.remove();
         }
+
+        async function loadPositions() {
+            const locationSelect = document.getElementById('location_id');
+            const positionInput = document.getElementById('position');
+            const datalist = document.getElementById('position-suggestions');
+            
+            const locationId = locationSelect.value;
+            if (!locationId) {
+                datalist.innerHTML = '';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/positions?location_id=${locationId}`);
+                if (response.ok) {
+                    const positions = await response.json();
+                    datalist.innerHTML = positions.map(pos => `<option value="${pos}">`).join('');
+                }
+            } catch (error) {
+                console.error('Error loading positions:', error);
+            }
+        }
+
+        // Load positions on page load if location is pre-selected
+        document.addEventListener('DOMContentLoaded', function() {
+            const locationSelect = document.getElementById('location_id');
+            if (locationSelect.value) {
+                loadPositions();
+            }
+        });
 
         // Collect properties on form submit
         document.querySelector('form').addEventListener('submit', function(e) {

@@ -40,6 +40,9 @@
                 
                 <div class="item-details">
                     <p><strong>Lagerort:</strong> {{(index $.Locations .LocationID).Path}}</p>
+                    {{if .Position}}
+                    <p><strong>Position:</strong> {{.Position}}</p>
+                    {{end}}
                     <p><strong>Menge:</strong> {{.Quantity}} {{.Unit}}</p>
                     
                     {{if .Properties}}

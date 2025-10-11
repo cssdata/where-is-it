@@ -26,15 +26,25 @@
         </div>
 
         <div class="locations-grid">
-            {{range .}}
+            {{range .Locations}}
             <div class="location-card">
-                <h3>{{.Name}}</h3>
+                <div class="item-header">
+                    <h3>{{.Name}}</h3>
+                    {{$hasItems := index $.LocationHasItems .ID}}
+                    {{$hasChildren := index $.LocationHasChildren .ID}}
+                    {{if and (not $hasItems) (not $hasChildren)}}
+                    <button class="btn-delete" onclick="deleteLocation('{{.ID}}', '{{.Name}}')" title="Lagerort löschen">
+                        🗑️
+                    </button>
+                    {{end}}
+                </div>
                 <p class="location-path">📍 {{.Path}}</p>
                 {{if .Description}}
                 <p class="description">{{.Description}}</p>
                 {{end}}
                 <div class="location-actions">
                     <a href="/items?location={{.ID}}" class="btn btn-small">Gegenstände anzeigen</a>
+                    <a href="/items/new?location={{.ID}}" class="btn btn-small">Gegenstand hinzufügen</a>
                 </div>
             </div>
             {{else}}
@@ -44,5 +54,26 @@
             {{end}}
         </div>
     </main>
+
+    <script>
+        async function deleteLocation(locationId, locationName) {
+            if (confirm(`Sind Sie sicher, dass Sie den Lagerort "${locationName}" löschen möchten?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`)) {
+                try {
+                    const response = await fetch(`/locations?id=${locationId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        // Reload the page to show updated list
+                        window.location.reload();
+                    } else {
+                        alert('Fehler beim Löschen des Lagerorts. Bitte versuchen Sie es erneut.');
+                    }
+                } catch (error) {
+                    alert('Fehler beim Löschen des Lagerorts. Bitte versuchen Sie es erneut.');
+                }
+            }
+        }
+    </script>
 </body>
 </html>

@@ -50,6 +50,9 @@
                     
                     <div class="result-details">
                         <p><strong>📍 Lagerort:</strong> {{.Location.Path}}</p>
+                        {{if .Item.Position}}
+                        <p><strong>📍 Position:</strong> {{.Item.Position}}</p>
+                        {{end}}
                         <p><strong>📦 Menge:</strong> {{.Item.Quantity}} {{.Item.Unit}}</p>
                         
                         {{if .Item.Properties}}
