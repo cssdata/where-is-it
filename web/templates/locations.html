@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lagerorte - Wo ist es?</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1><a href="/">📦 Wo ist es?</a></h1>
+            <ul class="nav-menu">
+                <li><a href="/">Startseite</a></li>
+                <li><a href="/locations" class="active">Lagerorte</a></li>
+                <li><a href="/items">Gegenstände</a></li>
+                <li><a href="/search">Suchen</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Lagerorte</h2>
+            <a href="/locations/new" class="btn btn-primary">Lagerort hinzufügen</a>
+        </div>
+
+        <div class="locations-grid">
+            {{range .}}
+            <div class="location-card">
+                <h3>{{.Name}}</h3>
+                <p class="location-path">📍 {{.Path}}</p>
+                {{if .Description}}
+                <p class="description">{{.Description}}</p>
+                {{end}}
+                <div class="location-actions">
+                    <a href="/items?location={{.ID}}" class="btn btn-small">Gegenstände anzeigen</a>
+                </div>
+            </div>
+            {{else}}
+            <div class="empty-state">
+                <p>Noch keine Lagerorte vorhanden. <a href="/locations/new">Erstellen Sie Ihren ersten Lagerort</a></p>
+            </div>
+            {{end}}
+        </div>
+    </main>
+</body>
+</html>

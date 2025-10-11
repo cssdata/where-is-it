@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gegenstände - Wo ist es?</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1><a href="/">📦 Wo ist es?</a></h1>
+            <ul class="nav-menu">
+                <li><a href="/">Startseite</a></li>
+                <li><a href="/locations">Lagerorte</a></li>
+                <li><a href="/items" class="active">Gegenstände</a></li>
+                <li><a href="/search">Suchen</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Gegenstände</h2>
+            <a href="/items/new" class="btn btn-primary">Gegenstand hinzufügen</a>
+        </div>
+
+        <div class="items-grid">
+            {{range .Items}}
+            <div class="item-card">
+                <div class="item-header">
+                    <h3>{{.Name}}</h3>
+                    <button class="btn-delete" onclick="deleteItem('{{.ID}}', '{{.Name}}')" title="Gegenstand löschen">
+                        🗑️
+                    </button>
+                </div>
+                {{if .Description}}
+                <p class="description">{{.Description}}</p>
+                {{end}}
+                
+                <div class="item-details">
+                    <p><strong>Lagerort:</strong> {{(index $.Locations .LocationID).Path}}</p>
+                    <p><strong>Menge:</strong> {{.Quantity}} {{.Unit}}</p>
+                    
+                    {{if .Properties}}
+                    <div class="properties">
+                        <strong>Eigenschaften:</strong>
+                        {{range $key, $value := .Properties}}
+                        <span class="property-tag">{{$key}}: {{$value}}</span>
+                        {{end}}
+                    </div>
+                    {{end}}
+                    
+                    {{if .Tags}}
+                    <div class="tags">
+                        {{range .Tags}}
+                        <span class="tag">{{.}}</span>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{else}}
+            <div class="empty-state">
+                <p>Noch keine Gegenstände vorhanden. <a href="/items/new">Fügen Sie Ihren ersten Gegenstand hinzu</a></p>
+            </div>
+            {{end}}
+        </div>
+    </main>
+
+    <script>
+        async function deleteItem(itemId, itemName) {
+            if (confirm(`Sind Sie sicher, dass Sie "${itemName}" löschen möchten?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`)) {
+                try {
+                    const response = await fetch(`/items?id=${itemId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        // Reload the page to show updated list
+                        window.location.reload();
+                    } else {
+                        alert('Fehler beim Löschen des Gegenstands. Bitte versuchen Sie es erneut.');
+                    }
+                } catch (error) {
+                    alert('Fehler beim Löschen des Gegenstands. Bitte versuchen Sie es erneut.');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

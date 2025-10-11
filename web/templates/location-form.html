@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lagerort hinzufügen - Wo ist es?</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1><a href="/">📦 Wo ist es?</a></h1>
+            <ul class="nav-menu">
+                <li><a href="/">Startseite</a></li>
+                <li><a href="/locations" class="active">Lagerorte</a></li>
+                <li><a href="/items">Gegenstände</a></li>
+                <li><a href="/search">Suchen</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Neuen Lagerort hinzufügen</h2>
+            <a href="/locations" class="btn btn-secondary">← Zurück zu den Lagerorten</a>
+        </div>
+
+        <form class="form" method="POST">
+            <div class="form-group">
+                <label for="name">Name *</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Beschreibung</label>
+                <textarea id="description" name="description" rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="parent_id">Übergeordneter Lagerort</label>
+                <select id="parent_id" name="parent_id">
+                    <option value="">Keiner (Oberste Ebene)</option>
+                    {{range .}}
+                    <option value="{{.ID}}">{{.Path}}</option>
+                    {{end}}
+                </select>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Lagerort erstellen</button>
+                <a href="/locations" class="btn btn-secondary">Abbrechen</a>
+            </div>
+        </form>
+    </main>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suchen - Wo ist es?</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1><a href="/">📦 Wo ist es?</a></h1>
+            <ul class="nav-menu">
+                <li><a href="/">Startseite</a></li>
+                <li><a href="/locations">Lagerorte</a></li>
+                <li><a href="/items">Gegenstände</a></li>
+                <li><a href="/search" class="active">Suchen</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h2>Gegenstände suchen</h2>
+        </div>
+
+        <form class="search-form" method="GET">
+            <div class="search-bar">
+                <input type="text" name="q" value="{{.Query}}" placeholder="Suchen Sie nach Gegenständen, Eigenschaften, Schlagwörtern..." class="search-input">
+                <button type="submit" class="btn btn-primary">Suchen</button>
+            </div>
+        </form>
+
+        {{if .Query}}
+        <div class="search-results">
+            <h3>Suchergebnisse für "{{.Query}}"</h3>
+            {{if .Results}}
+            <div class="results-grid">
+                {{range .Results}}
+                <div class="result-card">
+                    <div class="item-header">
+                        <h4>{{.Item.Name}}</h4>
+                        <button class="btn-delete" onclick="deleteItem('{{.Item.ID}}', '{{.Item.Name}}')" title="Gegenstand löschen">
+                            🗑️
+                        </button>
+                    </div>
+                    {{if .Item.Description}}
+                    <p class="description">{{.Item.Description}}</p>
+                    {{end}}
+                    
+                    <div class="result-details">
+                        <p><strong>📍 Lagerort:</strong> {{.Location.Path}}</p>
+                        <p><strong>📦 Menge:</strong> {{.Item.Quantity}} {{.Item.Unit}}</p>
+                        
+                        {{if .Item.Properties}}
+                        <div class="properties">
+                            <strong>Eigenschaften:</strong>
+                            {{range $key, $value := .Item.Properties}}
+                            <span class="property-tag">{{$key}}: {{$value}}</span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                        
+                        {{if .Item.Tags}}
+                        <div class="tags">
+                            {{range .Item.Tags}}
+                            <span class="tag">{{.}}</span>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="no-results">
+                <p>Keine Gegenstände gefunden für "{{.Query}}"</p>
+                <p>Versuchen Sie andere Suchbegriffe oder überprüfen Sie die Schreibweise.</p>
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="search-help">
+            <h3>Suchtipps</h3>
+            <ul>
+                <li>Suche nach Gegenstandsname: "schrauben"</li>
+                <li>Suche nach Eigenschaften: "M4", "20mm"</li>
+                <li>Suche nach Lagerort: "keller", "werkstatt"</li>
+                <li>Suche nach Schlagwörtern: "befestigung", "hardware"</li>
+            </ul>
+        </div>
+        {{end}}
+    </main>
+
+    <script>
+        async function deleteItem(itemId, itemName) {
+            if (confirm(`Sind Sie sicher, dass Sie "${itemName}" löschen möchten?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`)) {
+                try {
+                    const response = await fetch(`/items?id=${itemId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        // Reload the page to show updated list
+                        window.location.reload();
+                    } else {
+                        alert('Fehler beim Löschen des Gegenstands. Bitte versuchen Sie es erneut.');
+                    }
+                } catch (error) {
+                    alert('Fehler beim Löschen des Gegenstands. Bitte versuchen Sie es erneut.');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wo ist es? - Inventarverwaltung</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1><a href="/">📦 Wo ist es?</a></h1>
+            <ul class="nav-menu">
+                <li><a href="/">Startseite</a></li>
+                <li><a href="/locations">Lagerorte</a></li>
+                <li><a href="/items">Gegenstände</a></li>
+                <li><a href="/search">Suchen</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="hero">
+            <h2>Inventarverwaltungssystem</h2>
+            <p>Behalten Sie den Überblick über Ihre Gegenstände und wo sie gelagert sind</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>{{.LocationCount}}</h3>
+                <p>Lagerorte</p>
+                <a href="/locations">Verwalten →</a>
+            </div>
+            <div class="stat-card">
+                <h3>{{.ItemCount}}</h3>
+                <p>Gegenstände</p>
+                <a href="/items">Verwalten →</a>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h3>Schnellaktionen</h3>
+            <div class="action-buttons">
+                <a href="/locations/new" class="btn btn-primary">Lagerort hinzufügen</a>
+                <a href="/items/new" class="btn btn-primary">Gegenstand hinzufügen</a>
+                <a href="/search" class="btn btn-secondary">Gegenstände suchen</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
