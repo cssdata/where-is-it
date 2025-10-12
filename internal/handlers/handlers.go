@@ -274,6 +274,80 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Handler) EditItem(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		itemID := r.URL.Query().Get("id")
+		if itemID == "" {
+			http.Error(w, "Item ID required", http.StatusBadRequest)
+			return
+		}
+
+		item, err := h.storage.GetItem(itemID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		locations, _ := h.storage.GetAllLocations()
+		positions, _ := h.storage.GetPositionsByLocation(item.LocationID)
+
+		data := struct {
+			Item      models.Item
+			Locations []models.Location
+			Positions []string
+		}{
+			Item:      *item,
+			Locations: locations,
+			Positions: positions,
+		}
+
+		h.tmpl.ExecuteTemplate(w, "item-edit-form.html", data)
+	case "POST":
+		itemID := r.URL.Query().Get("id")
+		if itemID == "" {
+			http.Error(w, "Item ID required", http.StatusBadRequest)
+			return
+		}
+
+		quantity, _ := strconv.Atoi(r.FormValue("quantity"))
+
+		item := &models.Item{
+			ID:          itemID,
+			Name:        r.FormValue("name"),
+			Description: r.FormValue("description"),
+			LocationID:  r.FormValue("location_id"),
+			Position:    r.FormValue("position"),
+			Quantity:    quantity,
+			Unit:        r.FormValue("unit"),
+			Properties:  make(map[string]string),
+			Tags:        []string{},
+		}
+
+		// Parse properties from JSON
+		if props := r.FormValue("properties"); props != "" {
+			json.Unmarshal([]byte(props), &item.Properties)
+		}
+
+		// Parse tags (comma-separated)
+		if tags := r.FormValue("tags"); tags != "" {
+			for _, tag := range strings.Split(tags, ",") {
+				tag = strings.TrimSpace(tag)
+				if tag != "" {
+					item.Tags = append(item.Tags, tag)
+				}
+			}
+		}
+
+		if err := h.storage.UpdateItem(item); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		http.Redirect(w, r, "/items", http.StatusSeeOther)
+	}
+}
+
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	var results []models.SearchResult

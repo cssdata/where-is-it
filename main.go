@@ -30,6 +30,7 @@ func main() {
 	mux.HandleFunc("/locations/new", handler.CreateLocation)
 	mux.HandleFunc("/items", handler.Items)
 	mux.HandleFunc("/items/new", handler.CreateItem)
+	mux.HandleFunc("/items/edit", handler.EditItem)
 	mux.HandleFunc("/search", handler.Search)
 
 	// API routes

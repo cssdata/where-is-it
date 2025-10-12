@@ -38,11 +38,16 @@
             <div class="results-grid">
                 {{range .Results}}
                 <div class="result-card">
-                    <div class="item-header">
-                        <h4>{{.Item.Name}}</h4>
-                        <button class="btn-delete" onclick="deleteItem('{{.Item.ID}}', '{{.Item.Name}}')" title="Gegenstand löschen">
+                    <div class="item-icons">
+                        <a href="/items/edit?id={{.Item.ID}}" class="btn-edit-top" title="Gegenstand bearbeiten">
+                            ✏️
+                        </a>
+                        <button class="btn-delete-top" onclick="deleteItem('{{.Item.ID}}', '{{.Item.Name}}')" title="Gegenstand löschen">
                             🗑️
                         </button>
+                    </div>
+                    <div class="item-header">
+                        <h4>{{.Item.Name}}</h4>
                     </div>
                     {{if .Item.Description}}
                     <p class="description">{{.Item.Description}}</p>
