@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gegenstand hinzufügen - Wo ist Was?</title>
     <link href="/static/css/style.css" rel="stylesheet">
 </head>
+
 <body>
     <nav class="navbar">
         <div class="nav-container">
@@ -33,7 +35,8 @@
 
             <div class="form-group">
                 <label for="description">Beschreibung</label>
-                <textarea id="description" name="description" rows="3" placeholder="Zusätzliche Details zum Gegenstand"></textarea>
+                <textarea id="description" name="description" rows="3"
+                    placeholder="Zusätzliche Details zum Gegenstand"></textarea>
             </div>
 
             <div class="form-group">
@@ -48,11 +51,12 @@
 
             <div class="form-group">
                 <label for="position">Position (optional)</label>
-                <input type="text" id="position" name="position" placeholder="z.B. vorn oben, hinten links, mitte" list="position-suggestions">
+                <input type="text" id="position" name="position" value="{{.DefaultPosition}}"
+                    placeholder="z.B. vorn oben, hinten links, mitte" list="position-suggestions">
                 <datalist id="position-suggestions">
                     {{range .Positions}}
                     <option value="{{.}}">
-                    {{end}}
+                        {{end}}
                 </datalist>
             </div>
 
@@ -63,18 +67,30 @@
                 </div>
                 <div class="form-group">
                     <label for="unit">Einheit</label>
-                    <input type="text" id="unit" name="unit" placeholder="Stück, kg, Liter, usw.">
+                    <input type="text" id="unit" name="unit" value="{{.DefaultUnit}}"
+                        placeholder="Stück, kg, Liter, usw.">
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="properties">Eigenschaften</label>
                 <div id="properties-container">
+                    {{if .DefaultProperties}}
+                    {{range $key, $value := .DefaultProperties}}
+                    <div class="property-row">
+                        <input type="text" placeholder="Eigenschaftsname (z.B. Größe)" class="property-key"
+                            value="{{$key}}">
+                        <input type="text" placeholder="Wert (z.B. M4)" class="property-value" value="{{$value}}">
+                        <button type="button" onclick="removeProperty(this)" class="btn-remove">×</button>
+                    </div>
+                    {{end}}
+                    {{else}}
                     <div class="property-row">
                         <input type="text" placeholder="Eigenschaftsname (z.B. Größe)" class="property-key">
                         <input type="text" placeholder="Wert (z.B. M4)" class="property-value">
                         <button type="button" onclick="removeProperty(this)" class="btn-remove">×</button>
                     </div>
+                    {{end}}
                 </div>
                 <button type="button" onclick="addProperty()" class="btn btn-small">Eigenschaft hinzufügen</button>
             </div>
@@ -112,13 +128,13 @@
             const locationSelect = document.getElementById('location_id');
             const positionInput = document.getElementById('position');
             const datalist = document.getElementById('position-suggestions');
-            
+
             const locationId = locationSelect.value;
             if (!locationId) {
                 datalist.innerHTML = '';
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/api/positions?location_id=${locationId}`);
                 if (response.ok) {
@@ -131,7 +147,7 @@
         }
 
         // Load positions on page load if location is pre-selected
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const locationSelect = document.getElementById('location_id');
             if (locationSelect.value) {
                 loadPositions();
@@ -139,7 +155,7 @@
         });
 
         // Collect properties on form submit
-        document.querySelector('form').addEventListener('submit', function(e) {
+        document.querySelector('form').addEventListener('submit', function (e) {
             const properties = {};
             const rows = document.querySelectorAll('.property-row');
             rows.forEach(row => {
@@ -149,7 +165,7 @@
                     properties[key] = value;
                 }
             });
-            
+
             // Add hidden input with properties
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
@@ -159,4 +175,5 @@
         });
     </script>
 </body>
+
 </html>

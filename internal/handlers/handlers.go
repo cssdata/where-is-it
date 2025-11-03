@@ -14,6 +14,15 @@ import (
 type Handler struct {
 	storage storage.Storage
 	tmpl    *template.Template
+	// Default values for new items
+	lastUsedDefaults *ItemDefaults
+}
+
+type ItemDefaults struct {
+	LocationID string
+	Position   string
+	Unit       string
+	Properties map[string]string
 }
 
 func NewHandler(store storage.Storage) *Handler {
@@ -21,8 +30,9 @@ func NewHandler(store storage.Storage) *Handler {
 	tmpl := template.Must(template.ParseGlob("web/templates/*.html"))
 
 	return &Handler{
-		storage: store,
-		tmpl:    tmpl,
+		storage:          store,
+		tmpl:             tmpl,
+		lastUsedDefaults: &ItemDefaults{Unit: "Stück", Properties: make(map[string]string)},
 	}
 }
 
@@ -220,6 +230,11 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 
 		// If a location is pre-selected (e.g., from location page), get its positions
 		selectedLocationID := r.URL.Query().Get("location")
+		if selectedLocationID == "" {
+			// Use last used location as default if no specific location is requested
+			selectedLocationID = h.lastUsedDefaults.LocationID
+		}
+
 		var positions []string
 		if selectedLocationID != "" {
 			positions, _ = h.storage.GetPositionsByLocation(selectedLocationID)
@@ -229,10 +244,16 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 			Locations          []models.Location
 			SelectedLocationID string
 			Positions          []string
+			DefaultPosition    string
+			DefaultUnit        string
+			DefaultProperties  map[string]string
 		}{
 			Locations:          locations,
 			SelectedLocationID: selectedLocationID,
 			Positions:          positions,
+			DefaultPosition:    h.lastUsedDefaults.Position,
+			DefaultUnit:        h.lastUsedDefaults.Unit,
+			DefaultProperties:  h.lastUsedDefaults.Properties,
 		}
 
 		h.tmpl.ExecuteTemplate(w, "item-form.html", data)
@@ -268,6 +289,16 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		if err := h.storage.CreateItem(item); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		// Update the default values for next time
+		h.lastUsedDefaults.LocationID = item.LocationID
+		h.lastUsedDefaults.Position = item.Position
+		h.lastUsedDefaults.Unit = item.Unit
+		// Make a copy of properties to avoid reference issues
+		h.lastUsedDefaults.Properties = make(map[string]string)
+		for k, v := range item.Properties {
+			h.lastUsedDefaults.Properties[k] = v
 		}
 
 		http.Redirect(w, r, "/items", http.StatusSeeOther)
