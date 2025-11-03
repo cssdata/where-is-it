@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -497,4 +498,31 @@ func (h *Handler) APISearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(results)
+}
+
+func (h *Handler) APIPropertyNames(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	items, err := h.storage.GetAllItems()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Collect all unique property names
+	propertyNames := make(map[string]bool)
+	for _, item := range items {
+		for key := range item.Properties {
+			propertyNames[key] = true
+		}
+	}
+
+	// Convert to sorted slice
+	var names []string
+	for name := range propertyNames {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	json.NewEncoder(w).Encode(names)
 }

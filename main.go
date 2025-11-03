@@ -38,6 +38,7 @@ func main() {
 	mux.HandleFunc("/api/items", handler.APIItems)
 	mux.HandleFunc("/api/search", handler.APISearch)
 	mux.HandleFunc("/api/positions", handler.APIPositions)
+	mux.HandleFunc("/api/property-names", handler.APIPropertyNames)
 
 	log.Println("Starting server on 0.0.0.0:8080")
 	log.Fatal(http.ListenAndServe("0.0.0.0:8080", mux))
