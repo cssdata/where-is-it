@@ -20,10 +20,11 @@ type Handler struct {
 }
 
 type ItemDefaults struct {
-	LocationID string
-	Position   string
-	Unit       string
-	Properties map[string]string
+	LocationID       string
+	Position         string
+	Unit             string
+	Properties       map[string]string
+	FilterLocationID string // For filtering items by location
 }
 
 func NewHandler(store storage.Storage) *Handler {
@@ -175,34 +176,70 @@ func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Items(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		locationID := r.URL.Query().Get("location")
+		locationFilter := r.URL.Query().Get("location")
+		
+		// If no location filter is specified, use the default filter location
+		if locationFilter == "" {
+			locationFilter = h.lastUsedDefaults.FilterLocationID
+		}
+		
 		var items []models.Item
 		var err error
 
-		if locationID != "" {
-			items, err = h.storage.GetItemsByLocation(locationID)
-		} else {
-			items, err = h.storage.GetAllItems()
-		}
-
+		// Get all items first
+		items, err = h.storage.GetAllItems()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// Get locations for display
-		locations, _ := h.storage.GetAllLocations()
+		// Get all locations for hierarchical filtering
+		locations, err := h.storage.GetAllLocations()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Create location map and find child locations for hierarchical filtering
 		locationMap := make(map[string]models.Location)
 		for _, loc := range locations {
 			locationMap[loc.ID] = loc
 		}
 
+		// Filter by location if specified (including child locations)
+		if locationFilter != "" {
+			var filteredItems []models.Item
+			childLocationIDs := h.getChildLocationIDs(locationFilter, locations)
+			childLocationIDs[locationFilter] = true // Include the filter location itself
+			
+			for _, item := range items {
+				if childLocationIDs[item.LocationID] {
+					filteredItems = append(filteredItems, item)
+				}
+			}
+			items = filteredItems
+		}
+
+		// Prepare locations for dropdown (only top-level and their immediate children)
+		var dropdownLocations []models.Location
+		for _, loc := range locations {
+			// Include all locations for the dropdown
+			dropdownLocations = append(dropdownLocations, loc)
+		}
+		sort.Slice(dropdownLocations, func(i, j int) bool {
+			return dropdownLocations[i].Path < dropdownLocations[j].Path
+		})
+
 		data := struct {
-			Items     []models.Item
-			Locations map[string]models.Location
+			Items            []models.Item
+			Locations        map[string]models.Location
+			DropdownLocations []models.Location
+			SelectedLocation string
 		}{
-			Items:     items,
-			Locations: locationMap,
+			Items:             items,
+			Locations:         locationMap,
+			DropdownLocations: dropdownLocations,
+			SelectedLocation:  locationFilter,
 		}
 
 		h.tmpl.ExecuteTemplate(w, "items.html", data)
@@ -222,6 +259,25 @@ func (h *Handler) Items(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Item deleted successfully"))
 	}
+}
+
+// Helper function to get all child location IDs for hierarchical filtering
+func (h *Handler) getChildLocationIDs(parentID string, allLocations []models.Location) map[string]bool {
+	childIDs := make(map[string]bool)
+	
+	// Find direct children
+	for _, loc := range allLocations {
+		if loc.ParentID != nil && *loc.ParentID == parentID {
+			childIDs[loc.ID] = true
+			// Recursively find children of children
+			grandChildIDs := h.getChildLocationIDs(loc.ID, allLocations)
+			for grandChildID := range grandChildIDs {
+				childIDs[grandChildID] = true
+			}
+		}
+	}
+	
+	return childIDs
 }
 
 func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
@@ -296,6 +352,8 @@ func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
 		h.lastUsedDefaults.LocationID = item.LocationID
 		h.lastUsedDefaults.Position = item.Position
 		h.lastUsedDefaults.Unit = item.Unit
+		// Set the filter location to the newly created item's location
+		h.lastUsedDefaults.FilterLocationID = item.LocationID
 		// Make a copy of properties to avoid reference issues
 		h.lastUsedDefaults.Properties = make(map[string]string)
 		for k, v := range item.Properties {
@@ -382,11 +440,14 @@ func (h *Handler) EditItem(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
+	locationFilter := r.URL.Query().Get("location")
+	
 	var results []models.SearchResult
 
 	if query != "" {
 		searchQuery := models.SearchQuery{
 			Query: query,
+			// Don't pass LocationID to storage, we'll filter hierarchically ourselves
 		}
 		var err error
 		results, err = h.storage.SearchItems(searchQuery)
@@ -394,14 +455,45 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		// Apply hierarchical location filtering if specified
+		if locationFilter != "" {
+			locations, err := h.storage.GetAllLocations()
+			if err == nil {
+				childLocationIDs := h.getChildLocationIDs(locationFilter, locations)
+				childLocationIDs[locationFilter] = true // Include the filter location itself
+				
+				var filteredResults []models.SearchResult
+				for _, result := range results {
+					if childLocationIDs[result.Item.LocationID] {
+						filteredResults = append(filteredResults, result)
+					}
+				}
+				results = filteredResults
+			}
+		}
 	}
 
+	// Get all locations for the dropdown
+	locations, _ := h.storage.GetAllLocations()
+	var dropdownLocations []models.Location
+	for _, loc := range locations {
+		dropdownLocations = append(dropdownLocations, loc)
+	}
+	sort.Slice(dropdownLocations, func(i, j int) bool {
+		return dropdownLocations[i].Path < dropdownLocations[j].Path
+	})
+
 	data := struct {
-		Query   string
-		Results []models.SearchResult
+		Query             string
+		Results           []models.SearchResult
+		DropdownLocations []models.Location
+		SelectedLocation  string
 	}{
-		Query:   query,
-		Results: results,
+		Query:             query,
+		Results:           results,
+		DropdownLocations: dropdownLocations,
+		SelectedLocation:  locationFilter,
 	}
 
 	h.tmpl.ExecuteTemplate(w, "search.html", data)

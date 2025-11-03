@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suchen - Wo ist Was?</title>
     <link href="/static/css/style.css" rel="stylesheet">
 </head>
+
 <body>
     <nav class="navbar">
         <div class="nav-container">
@@ -25,8 +27,18 @@
         </div>
 
         <form class="search-form" method="GET">
+            <div class="filter-section">
+                <label for="location-filter">Lagerort:</label>
+                <select id="location-filter" name="location">
+                    <option value="">Alle Lagerorte</option>
+                    {{range .DropdownLocations}}
+                    <option value="{{.ID}}" {{if eq .ID $.SelectedLocation}}selected{{end}}>{{.Path}}</option>
+                    {{end}}
+                </select>
+            </div>
             <div class="search-bar">
-                <input type="text" name="q" value="{{.Query}}" placeholder="Suchen Sie nach Gegenständen, Eigenschaften, Schlagwörtern..." class="search-input">
+                <input type="text" name="q" value="{{.Query}}"
+                    placeholder="Suchen Sie nach Gegenständen, Eigenschaften, Schlagwörtern..." class="search-input">
                 <button type="submit" class="btn btn-primary">Suchen</button>
             </div>
         </form>
@@ -42,7 +54,8 @@
                         <a href="/items/edit?id={{.Item.ID}}" class="btn-edit-top" title="Gegenstand bearbeiten">
                             ✏️
                         </a>
-                        <button class="btn-delete-top" onclick="deleteItem('{{.Item.ID}}', '{{.Item.Name}}')" title="Gegenstand löschen">
+                        <button class="btn-delete-top" onclick="deleteItem('{{.Item.ID}}', '{{.Item.Name}}')"
+                            title="Gegenstand löschen">
                             🗑️
                         </button>
                     </div>
@@ -52,14 +65,14 @@
                     {{if .Item.Description}}
                     <p class="description">{{.Item.Description}}</p>
                     {{end}}
-                    
+
                     <div class="result-details">
                         <p><strong>📍 Lagerort:</strong> {{.Location.Path}}</p>
                         {{if .Item.Position}}
                         <p><strong>📍 Position:</strong> {{.Item.Position}}</p>
                         {{end}}
                         <p><strong>📦 Menge:</strong> {{.Item.Quantity}} {{.Item.Unit}}</p>
-                        
+
                         {{if .Item.Properties}}
                         <div class="properties">
                             <strong>Eigenschaften:</strong>
@@ -68,7 +81,7 @@
                             {{end}}
                         </div>
                         {{end}}
-                        
+
                         {{if .Item.Tags}}
                         <div class="tags">
                             {{range .Item.Tags}}
@@ -91,6 +104,7 @@
         <div class="search-help">
             <h3>Suchtipps</h3>
             <ul>
+                <li>Verwenden Sie den Lagerort-Filter, um die Suche auf bestimmte Bereiche zu beschränken</li>
                 <li>Suche nach Gegenstandsname: "schrauben"</li>
                 <li>Suche nach Eigenschaften: "M4", "20mm"</li>
                 <li>Suche nach Lagerort: "keller", "werkstatt"</li>
@@ -107,7 +121,7 @@
                     const response = await fetch(`/items?id=${itemId}`, {
                         method: 'DELETE'
                     });
-                    
+
                     if (response.ok) {
                         // Reload the page to show updated list
                         window.location.reload();
@@ -121,4 +135,5 @@
         }
     </script>
 </body>
+
 </html>

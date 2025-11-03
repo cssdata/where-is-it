@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gegenstände - Wo ist Was?</title>
     <link href="/static/css/style.css" rel="stylesheet">
 </head>
+
 <body>
     <nav class="navbar">
         <div class="nav-container">
@@ -25,6 +27,16 @@
             <a href="/items/new" class="btn btn-primary">Gegenstand hinzufügen</a>
         </div>
 
+        <div class="filter-section">
+            <label for="location-filter">Nach Lagerort filtern:</label>
+            <select id="location-filter" onchange="filterByLocation()">
+                <option value="">Alle Lagerorte</option>
+                {{range .DropdownLocations}}
+                <option value="{{.ID}}" {{if eq .ID $.SelectedLocation}}selected{{end}}>{{.Path}}</option>
+                {{end}}
+            </select>
+        </div>
+
         <div class="items-grid">
             {{range .Items}}
             <div class="item-card">
@@ -32,7 +44,8 @@
                     <a href="/items/edit?id={{.ID}}" class="btn-edit-top" title="Gegenstand bearbeiten">
                         ✏️
                     </a>
-                    <button class="btn-delete-top" onclick="deleteItem('{{.ID}}', '{{.Name}}')" title="Gegenstand löschen">
+                    <button class="btn-delete-top" onclick="deleteItem('{{.ID}}', '{{.Name}}')"
+                        title="Gegenstand löschen">
                         🗑️
                     </button>
                 </div>
@@ -42,14 +55,14 @@
                 {{if .Description}}
                 <p class="description">{{.Description}}</p>
                 {{end}}
-                
+
                 <div class="item-details">
                     <p><strong>Lagerort:</strong> {{(index $.Locations .LocationID).Path}}</p>
                     {{if .Position}}
                     <p><strong>Position:</strong> {{.Position}}</p>
                     {{end}}
                     <p><strong>Menge:</strong> {{.Quantity}} {{.Unit}}</p>
-                    
+
                     {{if .Properties}}
                     <div class="properties">
                         <strong>Eigenschaften:</strong>
@@ -58,7 +71,7 @@
                         {{end}}
                     </div>
                     {{end}}
-                    
+
                     {{if .Tags}}
                     <div class="tags">
                         {{range .Tags}}
@@ -70,20 +83,34 @@
             </div>
             {{else}}
             <div class="empty-state">
-                <p>Noch keine Gegenstände vorhanden. <a href="/items/new">Fügen Sie Ihren ersten Gegenstand hinzu</a></p>
+                <p>Noch keine Gegenstände vorhanden. <a href="/items/new">Fügen Sie Ihren ersten Gegenstand hinzu</a>
+                </p>
             </div>
             {{end}}
         </div>
     </main>
 
     <script>
+        function filterByLocation() {
+            const locationFilter = document.getElementById('location-filter').value;
+            const url = new URL(window.location);
+
+            if (locationFilter) {
+                url.searchParams.set('location', locationFilter);
+            } else {
+                url.searchParams.delete('location');
+            }
+
+            window.location.href = url.toString();
+        }
+
         async function deleteItem(itemId, itemName) {
             if (confirm(`Sind Sie sicher, dass Sie "${itemName}" löschen möchten?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`)) {
                 try {
                     const response = await fetch(`/items?id=${itemId}`, {
                         method: 'DELETE'
                     });
-                    
+
                     if (response.ok) {
                         // Reload the page to show updated list
                         window.location.reload();
@@ -97,4 +124,5 @@
         }
     </script>
 </body>
+
 </html>
