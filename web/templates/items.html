@@ -24,7 +24,7 @@
     <main class="container">
         <div class="page-header">
             <h2>Gegenstände</h2>
-            <a href="/items/new" class="btn btn-primary">Gegenstand hinzufügen</a>
+            <a href="/items/new{{if .SelectedLocation}}?location={{.SelectedLocation}}{{end}}" class="btn btn-primary">Gegenstand hinzufügen</a>
         </div>
 
         <div class="filter-section">
@@ -83,7 +83,7 @@
             </div>
             {{else}}
             <div class="empty-state">
-                <p>Noch keine Gegenstände vorhanden. <a href="/items/new">Fügen Sie Ihren ersten Gegenstand hinzu</a>
+                <p>Noch keine Gegenstände vorhanden. <a href="/items/new{{if .SelectedLocation}}?location={{.SelectedLocation}}{{end}}">Fügen Sie Ihren ersten Gegenstand hinzu</a>
                 </p>
             </div>
             {{end}}
