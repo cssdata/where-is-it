@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lagerort hinzufügen - Wo ist Was?</title>
+    <title>{{if .IsEdit}}Lagerort bearbeiten{{else}}Lagerort hinzufügen{{end}} - Wo ist Was?</title>
     <link href="/static/css/style.css" rel="stylesheet">
 </head>
 <body>
@@ -21,33 +21,37 @@
 
     <main class="container">
         <div class="page-header">
-            <h2>Neuen Lagerort hinzufügen</h2>
+            <h2>{{if .IsEdit}}Lagerort bearbeiten{{if .Location}}: {{.Location.Name}}{{end}}{{else}}Neuen Lagerort hinzufügen{{end}}</h2>
             <a href="/locations" class="btn btn-secondary">← Zurück zu den Lagerorten</a>
         </div>
 
         <form class="form" method="POST">
+            {{if .IsEdit}}
+            <input type="hidden" name="id" value="{{.Location.ID}}">
+            {{end}}
+            
             <div class="form-group">
                 <label for="name">Name *</label>
-                <input type="text" id="name" name="name" required>
+                <input type="text" id="name" name="name" value="{{if .Location}}{{.Location.Name}}{{end}}" required>
             </div>
 
             <div class="form-group">
                 <label for="description">Beschreibung</label>
-                <textarea id="description" name="description" rows="3"></textarea>
+                <textarea id="description" name="description" rows="3">{{if .Location}}{{.Location.Description}}{{end}}</textarea>
             </div>
 
             <div class="form-group">
                 <label for="parent_id">Übergeordneter Lagerort</label>
                 <select id="parent_id" name="parent_id">
-                    <option value="">Keiner (Oberste Ebene)</option>
-                    {{range .}}
-                    <option value="{{.ID}}">{{.Path}}</option>
+                    <option value="" {{if or (not .Location) (not .Location.ParentID)}}selected{{end}}>Keiner (Oberste Ebene)</option>
+                    {{range .Locations}}
+                    <option value="{{.ID}}" {{if and $.Location $.Location.ParentID (eq .ID (deref $.Location.ParentID))}}selected{{end}}>{{.Path}}</option>
                     {{end}}
                 </select>
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Lagerort erstellen</button>
+                <button type="submit" class="btn btn-primary">{{if .IsEdit}}Lagerort aktualisieren{{else}}Lagerort erstellen{{end}}</button>
                 <a href="/locations" class="btn btn-secondary">Abbrechen</a>
             </div>
         </form>

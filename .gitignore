@@ -5,6 +5,8 @@ main
 # Data directory (comment out if you want to include sample data)
 data/
 
+data.tar*
+
 # Go specific
 *.exe
 *.exe~

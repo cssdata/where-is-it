@@ -28,8 +28,18 @@ type ItemDefaults struct {
 }
 
 func NewHandler(store storage.Storage) *Handler {
-	// Parse templates
-	tmpl := template.Must(template.ParseGlob("web/templates/*.html"))
+	// Create template with custom functions
+	funcMap := template.FuncMap{
+		"deref": func(p *string) string {
+			if p == nil {
+				return ""
+			}
+			return *p
+		},
+	}
+
+	// Parse templates with custom functions
+	tmpl := template.Must(template.New("").Funcs(funcMap).ParseGlob("web/templates/*.html"))
 
 	return &Handler{
 		storage:          store,
@@ -152,21 +162,98 @@ func (h *Handler) Locations(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
+		// Check if we're editing (ID parameter present)
+		editID := r.URL.Query().Get("id")
+		isEdit := editID != ""
+
 		locations, _ := h.storage.GetAllLocations()
-		h.tmpl.ExecuteTemplate(w, "location-form.html", locations)
+
+		if isEdit {
+			// Edit mode - load existing location
+			location, err := h.storage.GetLocation(editID)
+			if err != nil {
+				http.Error(w, "Location not found", http.StatusNotFound)
+				return
+			}
+
+			// Filter out the location itself and its descendants to prevent circular references
+			var availableLocations []models.Location
+			for _, loc := range locations {
+				// Don't allow selecting the location itself or its children as parent
+				if loc.ID != editID && !strings.HasPrefix(loc.Path, location.Path+"/") {
+					availableLocations = append(availableLocations, loc)
+				}
+			}
+
+			data := struct {
+				Location  *models.Location
+				Locations []models.Location
+				IsEdit    bool
+			}{
+				Location:  location,
+				Locations: availableLocations,
+				IsEdit:    true,
+			}
+
+			h.tmpl.ExecuteTemplate(w, "location-form.html", data)
+		} else {
+			// Create mode - use the same structure as edit mode for consistency
+			data := struct {
+				Location  *models.Location
+				Locations []models.Location
+				IsEdit    bool
+			}{
+				Location:  nil,
+				Locations: locations,
+				IsEdit:    false,
+			}
+
+			h.tmpl.ExecuteTemplate(w, "location-form.html", data)
+		}
+
 	case "POST":
-		location := &models.Location{
-			Name:        r.FormValue("name"),
-			Description: r.FormValue("description"),
-		}
+		editID := r.FormValue("id")
+		isEdit := editID != ""
 
-		if parentID := r.FormValue("parent_id"); parentID != "" {
-			location.ParentID = &parentID
-		}
+		if isEdit {
+			// Edit existing location
+			location, err := h.storage.GetLocation(editID)
+			if err != nil {
+				http.Error(w, "Location not found", http.StatusNotFound)
+				return
+			}
 
-		if err := h.storage.CreateLocation(location); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			// Update fields
+			location.Name = r.FormValue("name")
+			location.Description = r.FormValue("description")
+
+			// Handle parent selection
+			parentID := r.FormValue("parent_id")
+			if parentID == "" {
+				location.ParentID = nil
+			} else {
+				location.ParentID = &parentID
+			}
+
+			if err := h.storage.UpdateLocation(location); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// Create new location
+			location := &models.Location{
+				Name:        r.FormValue("name"),
+				Description: r.FormValue("description"),
+			}
+
+			if parentID := r.FormValue("parent_id"); parentID != "" {
+				location.ParentID = &parentID
+			}
+
+			if err := h.storage.CreateLocation(location); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		http.Redirect(w, r, "/locations", http.StatusSeeOther)
@@ -177,12 +264,12 @@ func (h *Handler) Items(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		locationFilter := r.URL.Query().Get("location")
-		
+
 		// If no location filter is specified, use the default filter location
 		if locationFilter == "" {
 			locationFilter = h.lastUsedDefaults.FilterLocationID
 		}
-		
+
 		var items []models.Item
 		var err error
 
@@ -211,7 +298,7 @@ func (h *Handler) Items(w http.ResponseWriter, r *http.Request) {
 			var filteredItems []models.Item
 			childLocationIDs := h.getChildLocationIDs(locationFilter, locations)
 			childLocationIDs[locationFilter] = true // Include the filter location itself
-			
+
 			for _, item := range items {
 				if childLocationIDs[item.LocationID] {
 					filteredItems = append(filteredItems, item)
@@ -231,10 +318,10 @@ func (h *Handler) Items(w http.ResponseWriter, r *http.Request) {
 		})
 
 		data := struct {
-			Items            []models.Item
-			Locations        map[string]models.Location
+			Items             []models.Item
+			Locations         map[string]models.Location
 			DropdownLocations []models.Location
-			SelectedLocation string
+			SelectedLocation  string
 		}{
 			Items:             items,
 			Locations:         locationMap,
@@ -264,7 +351,7 @@ func (h *Handler) Items(w http.ResponseWriter, r *http.Request) {
 // Helper function to get all child location IDs for hierarchical filtering
 func (h *Handler) getChildLocationIDs(parentID string, allLocations []models.Location) map[string]bool {
 	childIDs := make(map[string]bool)
-	
+
 	// Find direct children
 	for _, loc := range allLocations {
 		if loc.ParentID != nil && *loc.ParentID == parentID {
@@ -276,7 +363,7 @@ func (h *Handler) getChildLocationIDs(parentID string, allLocations []models.Loc
 			}
 		}
 	}
-	
+
 	return childIDs
 }
 
@@ -441,7 +528,7 @@ func (h *Handler) EditItem(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	locationFilter := r.URL.Query().Get("location")
-	
+
 	var results []models.SearchResult
 
 	if query != "" {
@@ -462,7 +549,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				childLocationIDs := h.getChildLocationIDs(locationFilter, locations)
 				childLocationIDs[locationFilter] = true // Include the filter location itself
-				
+
 				var filteredResults []models.SearchResult
 				for _, result := range results {
 					if childLocationIDs[result.Item.LocationID] {

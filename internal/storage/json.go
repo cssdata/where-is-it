@@ -157,9 +157,51 @@ func (s *JSONStorage) UpdateLocation(location *models.Location) error {
 	if _, exists := s.locations[location.ID]; !exists {
 		return fmt.Errorf("location not found")
 	}
+
+	// Store old path for updating children
+	oldLocation := s.locations[location.ID]
+	oldPath := oldLocation.Path
+
 	location.UpdatedAt = time.Now()
+
+	// Regenerate path based on new Name and ParentID
+	if location.ParentID != nil {
+		if parent, exists := s.locations[*location.ParentID]; exists {
+			location.Path = parent.Path + "/" + location.Name
+		} else {
+			return fmt.Errorf("parent location not found")
+		}
+	} else {
+		location.Path = location.Name
+	}
+
+	// Update the location
 	s.locations[location.ID] = *location
+
+	// Update paths of all child locations if the path changed
+	if oldPath != location.Path {
+		s.updateChildPaths(location.ID, oldPath, location.Path)
+	}
+
 	return s.saveData()
+}
+
+// Helper function to update child location paths when parent path changes
+func (s *JSONStorage) updateChildPaths(parentID, oldParentPath, newParentPath string) {
+	for id, childLocation := range s.locations {
+		if childLocation.ParentID != nil && *childLocation.ParentID == parentID {
+			// Replace the old parent path with the new one
+			oldChildPath := childLocation.Path
+			if strings.HasPrefix(childLocation.Path, oldParentPath+"/") {
+				childLocation.Path = strings.Replace(childLocation.Path, oldParentPath+"/", newParentPath+"/", 1)
+				childLocation.UpdatedAt = time.Now()
+				s.locations[id] = childLocation
+
+				// Recursively update grandchildren
+				s.updateChildPaths(id, oldChildPath, childLocation.Path)
+			}
+		}
+	}
 }
 
 func (s *JSONStorage) DeleteLocation(id string) error {

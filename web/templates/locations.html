@@ -28,15 +28,20 @@
         <div class="locations-grid">
             {{range .Locations}}
             <div class="location-card">
-                <div class="item-header">
-                    <h3>{{.Name}}</h3>
+                <div class="location-icons">
+                    <a href="/locations/new?id={{.ID}}" class="btn-edit-location" title="Lagerort bearbeiten">
+                        ✏️
+                    </a>
                     {{$hasItems := index $.LocationHasItems .ID}}
                     {{$hasChildren := index $.LocationHasChildren .ID}}
                     {{if and (not $hasItems) (not $hasChildren)}}
-                    <button class="btn-delete" onclick="deleteLocation('{{.ID}}', '{{.Name}}')" title="Lagerort löschen">
+                    <button class="btn-delete-location" onclick="deleteLocation('{{.ID}}', '{{.Name}}')" title="Lagerort löschen">
                         🗑️
                     </button>
                     {{end}}
+                </div>
+                <div class="location-header">
+                    <h3>{{.Name}}</h3>
                 </div>
                 <p class="location-path">📍 {{.Path}}</p>
                 {{if .Description}}
